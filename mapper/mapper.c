@@ -86,6 +86,15 @@ void VendorRequestsOut(void) {
     }
 }
     
+// float pin_read_to_actual_voltage(uint16_t pin_value){
+//     // 0b1111111111000000 = 65,472 ~ 3 V
+//     // 0b0000000000000000 = 0 ~ 0 V
+//     float pin_value_float = (float)pin_value;
+//     float ratio = pin_value_float / PIN_CONVERSION_FACTOR;
+//     float actual_voltage = MAX_VOLTAGE * ratio;
+//     return actual_voltage;
+// }
+
 
 int16_t main(void) {
     init_pin();
@@ -105,16 +114,19 @@ int16_t main(void) {
     pos = 0; //16 bit int with binary point in front of the MSB
 
     led_on(&led2);
-    timer_setPeriod(&timer2, 0.2);
+    timer_setPeriod(&timer2, 0.5); //how often we send a pulse
     timer_start(&timer2);
     timer_setPeriod(&timer4,0.18); //this period should be close to timer2 (how often we send a pulse)
     timer_start(&timer4); 
     timer_setPeriod(&timer5,0.001);
     timer_start(&timer5);
 
+    timer_setPeriod(&timer1,0.5);
+    timer_start(&timer1);
 
-    // oc_servo(&oc1,&D[0],&timer1, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
-    // oc_servo(&oc2,&D[2],&timer3, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
+
+    // oc_servo(&oc1,&D[0],NULL, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
+    // oc_servo(&oc2,&D[2],NULL, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
     oc_pwm(&oc3,&D[3],NULL,FREQ,ZERO_DUTY);
 
     printf("Good morning\n");
@@ -126,7 +138,7 @@ int16_t main(void) {
     while (1) {
         ServiceUSB();
         // printf("%d\n", current_signal_value);
-        prev_signal_value = current_signal_value;
+        current_signal_value = pin_read(&A[3]);
         //write the values to the servos (move the servos to the requested position)
         // pin_write(&D[0],val1);
         // pin_write(&D[2],val2);
@@ -149,16 +161,21 @@ int16_t main(void) {
             send_pulse = !send_pulse;
             // printf("val1 = %u, val2 = %u\n", val1, val2);
         }
+        if (timer_flag(&timer1)) {
+            timer_lower(&timer1);
+            printf("time of flight: %d\n",time_of_flight);
+            // printf("val1 = %u, val2 = %u\n", val1, val2);
+        }
         current_signal_value = pin_read(&A[3]);
-        if ( abs(current_signal_value - prev_signal_value) > PEAK_DETECT_DIFF)
+        if ( current_signal_value - prev_signal_value > PEAK_DETECT_DIFF)
         {
             // printf("Peak detected!\n");
             peak_detect_time = timer_read(&timer4);
-            time_of_flight = abs(peak_detect_time - signal_send_time);
+            time_of_flight = peak_detect_time - signal_send_time;
             // printf("peak detect: %d\n", peak_detect_time);
             // printf("signal send: %d\n", signal_send_time);
-            printf("time of flight: %d\n",time_of_flight);
         }
+        prev_signal_value = current_signal_value;
     }
 }
 
