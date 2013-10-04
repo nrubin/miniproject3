@@ -90,16 +90,6 @@ void VendorRequestsOut(void) {
             USB_error_flags |= 0x01;                    // set Request Error Flag
     }
 }
-    
-// float pin_read_to_actual_voltage(uint16_t pin_value){
-//     // 0b1111111111000000 = 65,472 ~ 3 V
-//     // 0b0000000000000000 = 0 ~ 0 V
-//     float pin_value_float = (float)pin_value;
-//     float ratio = pin_value_float / PIN_CONVERSION_FACTOR;
-//     float actual_voltage = MAX_VOLTAGE * ratio;
-//     return actual_voltage;
-// }
-
 
 int16_t main(void) {
     init_pin();
@@ -122,16 +112,6 @@ int16_t main(void) {
     led_on(&led2);
     timer_setPeriod(&timer2, PULSE_FREQUENCY); //how often we send a pulse
     timer_start(&timer2);
-    // timer_setPeriod(&timer2, 0.5); //how often we send a pulse
-    // timer_start(&timer2);
-    // timer_setPeriod(&timer4,0.18); //this period should be close to timer2 (how often we send a pulse)
-    // timer_start(&timer4); 
-    // timer_setPeriod(&timer5,0.001);
-    // timer_start(&timer5);
-
-    // timer_setPeriod(&timer1,0.5);
-    // timer_start(&timer1);
-
 
     // oc_servo(&oc1,&D[0],NULL, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
     // oc_servo(&oc2,&D[2],NULL, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
@@ -145,11 +125,6 @@ int16_t main(void) {
     }
     while (1) {
         ServiceUSB();
-        // printf("%d\n", current_signal_value);
-        // current_signal_value = pin_read(&A[3]);
-        //write the values to the servos (move the servos to the requested position)
-        // pin_write(&D[0],val1);
-        // pin_write(&D[2],val2);
 
         //adapted from Patrick and Charlie's approach
         if (!send_pulse && timer_read(&timer2) < PULSE_WIDTH){
@@ -165,44 +140,11 @@ int16_t main(void) {
         {
             if (pin_read(&D[1]) && get_distance)
             {
-                printf("I've found an echo at time %d\n", timer_read(&timer2));
+                printf("%d\n", timer_read(&timer2));
                 get_distance = 0;
             }
-            // printf("I've found an echo at %d\n",timer_read(&timer2));
         }
 
-        // if (timer_flag(&timer5)) {
-        //     timer_lower(&timer5);
-        //     if (send_pulse)
-        //     {
-        //         pin_write(&D[3],HALF_DUTY);
-        //         signal_send_time = timer_read(&timer4);
-        //     } else {
-        //         pin_write(&D[3],ZERO_DUTY);
-        //     }
-        //     send_pulse = 0;
-        //     // printf("val1 = %u, val2 = %u\n", val1, val2);
-        // }
-        // if (timer_flag(&timer2)) {
-        //     timer_lower(&timer2);
-        //     led_toggle(&led1);
-        //     send_pulse = !send_pulse;
-        //     // printf("val1 = %u, val2 = %u\n", val1, val2);
-        // }
-        // if (timer_flag(&timer2)) {
-            // timer_lower(&timer2);
-            // led_toggle(&led1);
-        // }
-        // current_signal_value = pin_read(&A[3]);
-        // if ( current_signal_value - prev_signal_value > PEAK_DETECT_DIFF)
-        // {
-        //     // printf("Peak detected!\n");
-        //     peak_detect_time = timer_read(&timer4);
-        //     time_of_flight = peak_detect_time - signal_send_time;
-        //     // printf("peak detect: %d\n", peak_detect_time);
-        //     // printf("signal send: %d\n", signal_send_time);
-        // }
-        // prev_signal_value = current_signal_value;
     }
 }
 

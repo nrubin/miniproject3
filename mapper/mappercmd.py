@@ -1,6 +1,7 @@
 
 import usb.core
 import time
+import serial
 
 class BraduinoUSBCommunicator:
 
@@ -61,6 +62,7 @@ class BraduinoUSBCommunicator:
             time.sleep(0.05) #don't overwhelm the PIC/servos
 
 if __name__ == '__main__':
+    ser = serial.Serial('/dev/ttyUSB0',19200,timeout=0)
     h = BraduinoUSBCommunicator()  
     #scanning code
     r = 200
