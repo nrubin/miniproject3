@@ -1,7 +1,12 @@
-
 import usb.core
 import time
 import serial
+import math
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+import random
+
 
 class BraduinoUSBCommunicator:
 
@@ -59,19 +64,77 @@ class BraduinoUSBCommunicator:
             print "val1 = %d and val2=%d" % (val1,val2)
             print "in binary, val1 = %s and val2 = %s" % (bin(val1)[1:],bin(val2)[1:])
             self.set_vals(val1,val2)
-            time.sleep(0.05) #don't overwhelm the PIC/servos
+            time.sleep(0.1) #wait long enough so we get a position back
+
+def distance(x1,y1,x2,y2):
+    return math.sqrt((x2-x1)**2 + (y2-y1)**2)
+
+def generate_servo_positions(resolution):
+    resolution = float(resolution)
+    num_points = 180.0/resolution
+    omega, phi = 0, 0 #positions in degrees
+    omegas, phis = [], []
+    for i in xrange(1,int(num_points)+2):
+        omegas.append(omega)
+        phis.append(phi)
+        omega += resolution
+        phi += resolution
+    all_locations = []
+    omega,phi = 0, 0
+    for i in xrange(0,len(omegas)):
+        omega = omegas[i]
+        for j in xrange(0,len(phis)):
+            phi = phis[j]
+            location = (omega,phi)
+            all_locations.append(location)
+        phis.reverse()
+    return all_locations
+
+def read_from_serial(ser):
+    if ser.inWaiting() > 6:
+        s = ser.readline(8)
+        try:
+            t = float(s)
+        except:
+            return False
+        return t
+    return False
+
+def omega_to_theta(omega):
+    return math.radians(omega-90.0)
+    # return [math.radians(position[0]-90) for position in positions]
+
+def phi_to_r(phi):
+    return math.sin(math.radians(phi-90.0))
+    # return [math.cos(math.radians(position[1])) for position in positions]
+
+def plot(measurements,res):
+    theta = []
+    r = []
+    z = []
+    for measurement in measurements:
+        theta.append(omega_to_theta(measurement[0]))
+        r.append(phi_to_r(measurement[1]))
+        z.append(measurement[2])
+    area = 100000/res
+    colors = z
+    ax = plt.subplot(111, polar=True)
+    c = plt.scatter(theta, r, c=colors, s=area, cmap=plt.cm.hsv)
+    c.set_alpha(0.50)
+    plt.colorbar()
+    plt.show()
 
 if __name__ == '__main__':
     ser = serial.Serial('/dev/ttyUSB0',19200,timeout=0)
     h = BraduinoUSBCommunicator()  
-    #scanning code
-    r = 200
-    for i in range(1,r,2):
-        for j in range(1,r):
-            pos1 = float(i)/r
-            pos2 = float(j)/r
-            h.move_servos(pos1,pos2)
-        for k in range(r,1,-1):
-            pos1 = float(i+1)/r
-            pos2 = float(k)/r
-            h.move_servos(pos1,pos2)
+    res = 18
+    positions = generate_servo_positions(res)
+    measurements = [] 
+    for position in positions:
+        h.move_servos(position[0]/180.0,position[1]/180.0)
+        t = read_from_serial(ser)
+        if t:
+            measurements.append((position[0],position[1],t))
+        else:
+            measurements.append((position[0],position[1],1153.0))
+    plot(measurements,res)

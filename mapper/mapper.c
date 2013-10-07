@@ -100,11 +100,8 @@ int16_t main(void) {
     init_oc();
 
     //setup the signal input pin
-    pin_analogIn(&A[3]);
-    pin_digitalIn(&D[1]);
+    pin_digitalIn(&D[4]);
 
-    prev_signal_value = 65472;
-    current_signal_value = 65472;
     val1 = 0;
     val2 = 0;
     pos = 0; //16 bit int with binary point in front of the MSB
@@ -112,9 +109,11 @@ int16_t main(void) {
     led_on(&led2);
     timer_setPeriod(&timer2, PULSE_FREQUENCY); //how often we send a pulse
     timer_start(&timer2);
+    timer_setPeriod(&timer3, 0.5); //heartbeat
+    timer_start(&timer3);
 
-    // oc_servo(&oc1,&D[0],NULL, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
-    // oc_servo(&oc2,&D[2],NULL, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
+    oc_servo(&oc1,&D[0],&timer4, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
+    oc_servo(&oc2,&D[2],&timer5, INTERVAL,MIN_WIDTH, MAX_WIDTH, pos);
     oc_pwm(&oc3,&D[3],NULL,FREQ,ZERO_DUTY);
 
     printf("Good morning\n");
@@ -125,7 +124,8 @@ int16_t main(void) {
     }
     while (1) {
         ServiceUSB();
-
+        pin_write(&D[0],val1);
+        pin_write(&D[2],val2); 
         //adapted from Patrick and Charlie's approach
         if (!send_pulse && timer_read(&timer2) < PULSE_WIDTH){
             send_pulse = 1;
@@ -138,13 +138,19 @@ int16_t main(void) {
 
         if (timer_read(&timer2) >= ECHO_TIME)
         {
-            if (pin_read(&D[1]) && get_distance)
+            if (pin_read(&D[4]) && get_distance)
             {
                 printf("%d\n", timer_read(&timer2));
                 get_distance = 0;
             }
         }
+       if (timer_flag(&timer3)) {
+            //show a heartbeat and a status message
+            timer_lower(&timer3);
+            led_toggle(&led1);
+        }
 
     }
 }
+
 
